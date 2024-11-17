@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 import os
 import urllib.request, json
 import requests
-
+import pytz
 import sqlite3
 
 
@@ -14,9 +14,10 @@ import sqlite3
 load_dotenv()
 token = os.getenv("DISCORD_TOKEN")
 
-chile_tz = datetime.datetime.now().astimezone().tzinfo
-hora_entrar = datetime.time(hour=21, minute=21, tzinfo=chile_tz)
-hora_salida = datetime.time(hour=21, minute=26, tzinfo=chile_tz)
+chile_tz = pytz.timezone('Chile/Continental')
+hora_actual_chile = datetime.datetime.now(chile_tz)
+hora_entrar = datetime.time(hour=21, minute=21) 
+hora_salida = datetime.time(hour=21, minute=26) 
 
 bot = commands.Bot(command_prefix='>', description="Bot creado para MK", intents=discord.Intents.all())
 
