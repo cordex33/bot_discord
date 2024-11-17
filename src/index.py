@@ -5,28 +5,26 @@ from dotenv import load_dotenv
 import os
 import urllib.request, json
 import requests
-import pytz
 import sqlite3
 
 
 #--------------Variables a ordenar--------------#
-
+#db_path = 'home/ubuntu/discord-bot/bot_discord/src/database/usuarios' solo activar en el sv de aws
 load_dotenv()
 token = os.getenv("DISCORD_TOKEN")
 
-chile_tz = pytz.timezone('Chile/Continental')
-hora_actual_chile = datetime.datetime.now(chile_tz)
-hora_entrar = datetime.time(hour=21, minute=21) 
-hora_salida = datetime.time(hour=21, minute=26) 
+chile_tz = datetime.datetime.now().astimezone().tzinfo
+hora_entrar = datetime.time(hour=15, minute=58, tzinfo=chile_tz)
+hora_salida = datetime.time(hour=15, minute=50, tzinfo=chile_tz)
 
-bot = commands.Bot(command_prefix='>', description="Bot creado para MK", intents=discord.Intents.all())
+bot = commands.Bot(command_prefix='>', description="Bot creado para MK", intents=discord.Intents.all(), help_command=None)
 
 #--------------comandos de bot--------------#
 
 @bot.command()
 async def info(ctx):
     embed = discord.Embed(title="Información acerca del bot", description="Aquí va a ir todo con lo relacionado al bot.", 
-                          timestamp=datetime.datetime.utcnow() + datetime.timedelta(hours=-3), 
+                          timestamp=datetime.datetime.now(), 
                           color=discord.Color.blue())
     embed.set_thumbnail(url="https://www.masterkey.cl/images/logo-mk-new.png")
 
@@ -63,7 +61,7 @@ async def registrar(ctx, *options):
         rut = options[0]
         id_discord = ctx.author.id
 
-        mi_conexion = sqlite3.connect("src/database/usuarios")
+        mi_conexion = sqlite3.connect("src/database/usuarios") #db_path en el sv de aws
         cursor = mi_conexion.cursor()
 
         cursor.execute("SELECT * FROM usuario WHERE id_discord = ?", (id_discord,)) #Comprobamos si hay una usuario ya con el id de discord
@@ -78,8 +76,15 @@ async def registrar(ctx, *options):
             mi_conexion.commit()
             return
     
+@bot.command()
+async def help(ctx):
 
-    
+    embed = discord.Embed(title="Comandos del bot", description="Por ahora solo contamos con el comando de '>registro'.\nSe vienen cositas!.", 
+                          timestamp=datetime.datetime.now(), 
+                          color=discord.Color.blue())
+    embed.set_thumbnail(url="https://www.masterkey.cl/images/logo-mk-new.png")
+    await ctx.send(embed=embed)
+
 #--------------Eventos de bot--------------#
 
 @bot.event
@@ -102,7 +107,7 @@ async def on_reaction_add(reaction: discord.Reaction, user):
     
 @bot.event
 async def on_ready():
-    await bot.change_presence(activity=discord.Streaming(name="bot entrenando", url="https://www.twitch.tv/rambodriving"))
+    await bot.change_presence(status=discord.Status.online, activity=discord.CustomActivity(name="Master🤖 >info"))
     print('todo bien')
     print(datetime.datetime.now())
     mensaje_entrada.start()
@@ -113,17 +118,16 @@ async def on_ready():
 async def on_member_join(member: discord.Member) -> None:
     channel = discord.utils.get(member.guild.text_channels, name='general')
     if channel:
-        await channel.send(f'Bienvenido {member.mention}')
-        await member.send('todo bien?')
+        await channel.send(f'¡Bienvenido/a {member.mention} al equipo de MasterKey. Nos complace contar con tu presencia en nuestra comunidad!.')
+        await member.send('Si tienes alguna duda o necesitas asistencia, no dudes en ponerte en contacto con cualquiera de nosotros. ¡Estamos aquí para apoyarte en tu integración!')
 
 #--------------Hasta acá--------------
 
 
 #--------------Mensajes automatizados--------------#
-#Mensaje de salida
+#Mensaje de entrada
 @tasks.loop(time=hora_entrar)
 async def mensaje_entrada():
-    print("etnré al msj de entrada")
     hora = datetime.datetime.now(chile_tz).strftime("%H:%M")
     
     if hora == hora_entrar.strftime("%H:%M") and not es_feriado(): #Agregar paraa sabado y domingo: and not datetime.datetime.today().weekday() == 5 and not datetime.datetime.today().weekday() == 6:
@@ -131,14 +135,14 @@ async def mensaje_entrada():
         guild = discord.utils.get(bot.guilds, id=827940399422111754)  #Cambiar por id del sv que queremos enviar msj
 
         channel = discord.utils.get(guild.text_channels, name='general')
-        embed = discord.Embed(title="Marcar entrada", description="Buenos días, recuerden marcar entrada!.", 
-                          timestamp=datetime.datetime.utcnow() + datetime.timedelta(hours=-3), 
-                          color=discord.Color.blue())
+        embed = discord.Embed(title="Marcar entrada", 
+                            description="¡Buenos días! No olviden marcar su entrada antes de comenzar la jornada.", 
+                            timestamp=datetime.datetime.now(), 
+                            color=discord.Color.blue())
         
         embed.set_thumbnail(url="https://www.masterkey.cl/images/logo-mk-new.png")
-
-        msg = await channel.send(embed=embed)
-        esperar = await msg.add_reaction('✅')
+        msg = await channel.send(content="@everyone", embed=embed, delete_after=60)
+        await msg.add_reaction('✅')
         
 
 #Mensaje de salida
@@ -152,12 +156,13 @@ async def mensaje_salida():
         guild = discord.utils.get(bot.guilds, id=827940399422111754)
         
         channel = discord.utils.get(guild.text_channels, name='general')
-        embed = discord.Embed(title="Marcar Salida", description="Hasta mañana, recuerden marcar salida!.", 
-                          timestamp=datetime.datetime.utcnow() + datetime.timedelta(hours=-3), 
-                          color=discord.Color.blue())
+        embed = discord.Embed(title="Marcar Salida", 
+                            description="Recuerden marcar su salida antes de finalizar su jornada. Que tengan un excelente descanso.", 
+                            timestamp=datetime.datetime.now(), 
+                            color=discord.Color.blue())
         embed.set_thumbnail(url="https://www.masterkey.cl/images/logo-mk-new.png")
 
-        msg = await channel.send(embed=embed)
+        msg = await channel.send(content="@everyone", embed=embed, delete_after=60)
         await msg.add_reaction('❗')
 
 
@@ -181,8 +186,8 @@ def es_feriado():
 
 def marcar_entrada(id_discord):
 
-    mi_conexion = sqlite3.connect("src/database/usuarios")
-    cursor = mi_conexion.cursor()
+    mi_conexion = sqlite3.connect("src/database/usuarios") #db_path en servidor aws
+    cursor = mi_conexion.cursor() 
 
     cursor.execute("SELECT rut FROM usuario WHERE id_discord = ?", (id_discord,))
 
@@ -192,7 +197,7 @@ def marcar_entrada(id_discord):
         print("entreasds")
         return (f"Usted no se encuentra en nuestra base de datos. Por favor use '>registro'")
 
-    request_entrada = requests.get('https://app.ctrlit.cl/ctrl/dial/registrarweb/EUqtz5lvAg?i=1&lat=&lng=&r=19275294-9') 
+    request_entrada = requests.get('https://app.ctrlit.cl/ctrl/dial/registrarweb/EUqtz5lvAg?i=1&lat=&lng=&r=' + rut) 
     estado_entrada = request_entrada.content.decode('utf-8')
 
     if estado_entrada == 'ok':
@@ -202,7 +207,7 @@ def marcar_entrada(id_discord):
     
     
 def marcar_salida(id_discord):
-    mi_conexion = sqlite3.connect("src/database/usuarios")
+    mi_conexion = sqlite3.connect("src/database/usuarios") #db_path en servidor aws
     cursor = mi_conexion.cursor()
 
     cursor.execute("SELECT rut FROM usuario WHERE id_discord = ?", (id_discord,))
@@ -210,11 +215,11 @@ def marcar_salida(id_discord):
     try:
         rut = cursor.fetchone()[0]
     except:
-        print("entre")
+
         return (f"Usted no se encuentra en nuestra base de datos. Por favor use '>registro'")
 
   
-    request_salida = requests.get('https://app.ctrlit.cl/ctrl/dial/registrarweb/EUqtz5lvAg?i=0&lat=&lng=&r=19275294-9') 
+    request_salida = requests.get('https://app.ctrlit.cl/ctrl/dial/registrarweb/EUqtz5lvAg?i=0&lat=&lng=&r=' + rut) 
     estado_salida = request_salida.content.decode('utf-8')
 
     if estado_salida == 'ok':
