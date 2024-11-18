@@ -9,13 +9,13 @@ import sqlite3
 
 
 #--------------Variables a ordenar--------------#
-#db_path = 'home/ubuntu/discord-bot/bot_discord/src/database/usuarios' solo activar en el sv de aws
+db_path = 'home/ubuntu/discord-bot/bot_discord/src/database/usuarios' #solo activar en el sv de aws
 load_dotenv()
 token = os.getenv("DISCORD_TOKEN")
 
 chile_tz = datetime.datetime.now().astimezone().tzinfo
-hora_entrar = datetime.time(hour=15, minute=58, tzinfo=chile_tz)
-hora_salida = datetime.time(hour=15, minute=50, tzinfo=chile_tz)
+hora_entrar = datetime.time(hour=20, minute=17, tzinfo=chile_tz)
+hora_salida = datetime.time(hour=20, minute=28, tzinfo=chile_tz)
 
 bot = commands.Bot(command_prefix='>', description="Bot creado para MK", intents=discord.Intents.all(), help_command=None)
 
@@ -29,7 +29,6 @@ async def info(ctx):
     embed.set_thumbnail(url="https://www.masterkey.cl/images/logo-mk-new.png")
 
     msg = await ctx.send(embed=embed)
-    await msg.add_reaction('❗')
 
 @bot.command()
 async def registrar(ctx, *options):
@@ -61,7 +60,7 @@ async def registrar(ctx, *options):
         rut = options[0]
         id_discord = ctx.author.id
 
-        mi_conexion = sqlite3.connect("src/database/usuarios") #db_path en el sv de aws
+        mi_conexion = sqlite3.connect(db_path) #db_path en el sv de aws
         cursor = mi_conexion.cursor()
 
         cursor.execute("SELECT * FROM usuario WHERE id_discord = ?", (id_discord,)) #Comprobamos si hay una usuario ya con el id de discord
@@ -88,18 +87,25 @@ async def help(ctx):
 #--------------Eventos de bot--------------#
 
 @bot.event
-async def on_reaction_add(reaction: discord.Reaction, user):
+async def on_reaction_add(reaction, user):
     if user == bot.user:
         return
     
-    #
-    if reaction.message.author == bot.user and str(reaction.emoji) == '✅':
+    confirmar_bot = False 
+    
+    async for usuario in reaction.users(): #Vemos si el bot reaccionó a su msj
+        if usuario.bot:  
+            confirmar_bot = True
+            break 
+
+
+    if reaction.message.author == bot.user and str(reaction.emoji) == '✅' and confirmar_bot:
         enviar_dm = await user.create_dm()
         id_discord = user.id
 
         await enviar_dm.send(marcar_entrada(id_discord))
 
-    if reaction.message.author == bot.user and str(reaction.emoji) == '❗':
+    if reaction.message.author == bot.user and str(reaction.emoji) == '❗' and confirmar_bot:
         enviar_dm = await user.create_dm()
 
         id_discord = user.id
@@ -130,7 +136,7 @@ async def on_member_join(member: discord.Member) -> None:
 async def mensaje_entrada():
     hora = datetime.datetime.now(chile_tz).strftime("%H:%M")
     
-    if hora == hora_entrar.strftime("%H:%M") and not es_feriado(): #Agregar paraa sabado y domingo: and not datetime.datetime.today().weekday() == 5 and not datetime.datetime.today().weekday() == 6:
+    if hora == hora_entrar.strftime("%H:%M") and not es_feriado() and not datetime.datetime.today().weekday() == 5 and not datetime.datetime.today().weekday() == 6:
 
         guild = discord.utils.get(bot.guilds, id=827940399422111754)  #Cambiar por id del sv que queremos enviar msj
 
@@ -141,7 +147,7 @@ async def mensaje_entrada():
                             color=discord.Color.blue())
         
         embed.set_thumbnail(url="https://www.masterkey.cl/images/logo-mk-new.png")
-        msg = await channel.send(content="@everyone", embed=embed, delete_after=60)
+        msg = await channel.send(content="@everyone", embed=embed, delete_after=77390)
         await msg.add_reaction('✅')
         
 
@@ -162,7 +168,7 @@ async def mensaje_salida():
                             color=discord.Color.blue())
         embed.set_thumbnail(url="https://www.masterkey.cl/images/logo-mk-new.png")
 
-        msg = await channel.send(content="@everyone", embed=embed, delete_after=60)
+        msg = await channel.send(content="@everyone", embed=embed, delete_after=43200)
         await msg.add_reaction('❗')
 
 
@@ -186,7 +192,7 @@ def es_feriado():
 
 def marcar_entrada(id_discord):
 
-    mi_conexion = sqlite3.connect("src/database/usuarios") #db_path en servidor aws
+    mi_conexion = sqlite3.connect(db_path) #db_path en servidor aws
     cursor = mi_conexion.cursor() 
 
     cursor.execute("SELECT rut FROM usuario WHERE id_discord = ?", (id_discord,))
@@ -194,7 +200,7 @@ def marcar_entrada(id_discord):
     try:
         rut = cursor.fetchone()[0]
     except:
-        print("entreasds")
+
         return (f"Usted no se encuentra en nuestra base de datos. Por favor use '>registro'")
 
     request_entrada = requests.get('https://app.ctrlit.cl/ctrl/dial/registrarweb/EUqtz5lvAg?i=1&lat=&lng=&r=' + rut) 
@@ -207,7 +213,7 @@ def marcar_entrada(id_discord):
     
     
 def marcar_salida(id_discord):
-    mi_conexion = sqlite3.connect("src/database/usuarios") #db_path en servidor aws
+    mi_conexion = sqlite3.connect(db_path) #db_path en servidor aws
     cursor = mi_conexion.cursor()
 
     cursor.execute("SELECT rut FROM usuario WHERE id_discord = ?", (id_discord,))
