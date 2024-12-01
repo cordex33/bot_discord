@@ -24,7 +24,7 @@ bot = commands.Bot(command_prefix='>', description="Bot creado para MK", intents
 async def info(ctx):
     dm_privado = await ctx.author.create_dm()
     embed = discord.Embed(
-        title="Información acerca del bot", description="Aquí va a ir todo con lo relacionado al bot.", 
+        title="Información acerca del bot", description="Bot creado de manera voluntaria por el tim Fichas Clínicas 2024.", 
         timestamp=datetime.datetime.now(), 
         color=discord.Color.blue()
     )
