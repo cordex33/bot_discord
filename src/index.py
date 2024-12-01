@@ -9,7 +9,7 @@ import sqlite3
 
 
 #--------------Variables a ordenar--------------#
-db_path = 'home/ubuntu/discord-bot/bot_discord/src/database/usuarios'
+#db_path = 'home/ubuntu/discord-bot/bot_discord/src/database/usuarios' solo activar en el sv de aws
 load_dotenv()
 token = os.getenv("DISCORD_TOKEN")
 
@@ -62,7 +62,7 @@ async def registrar(ctx, *options):
         rut = options[0]
         id_discord = ctx.author.id
 
-        mi_conexion = sqlite3.connect(db_path) #db_path en el sv de aws
+        mi_conexion = sqlite3.connect(r"C:\Users\matia\Desktop\bot-discord\src\database\usuarios") #db_path en el sv de aws
         cursor = mi_conexion.cursor()
 
         cursor.execute("SELECT * FROM usuario WHERE id_discord = ?", (id_discord,)) #Comprobamos si hay una usuario ya con el id de discord
@@ -223,7 +223,7 @@ def es_feriado():
 
 def marcar_entrada(id_discord):
 
-    mi_conexion = sqlite3.connect(db_path) #db_path en servidor aws
+    mi_conexion = sqlite3.connect(r"C:\Users\matia\Desktop\bot-discord\src\database\usuarios") #db_path en servidor aws
     cursor = mi_conexion.cursor() 
 
     cursor.execute("SELECT rut FROM usuario WHERE id_discord = ?", (id_discord,))
@@ -244,7 +244,7 @@ def marcar_entrada(id_discord):
     
     
 def marcar_salida(id_discord):
-    mi_conexion = sqlite3.connect(db_path) #db_path en servidor aws
+    mi_conexion = sqlite3.connect(r"C:\Users\matia\Desktop\bot-discord\src\database\usuarios") #db_path en servidor aws
     cursor = mi_conexion.cursor()
 
     cursor.execute("SELECT rut FROM usuario WHERE id_discord = ?", (id_discord,))
