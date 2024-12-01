@@ -9,13 +9,12 @@ import sqlite3
 
 
 #--------------Variables a ordenar--------------#
-#db_path = 'home/ubuntu/discord-bot/bot_discord/src/database/usuarios' solo activar en el sv de aws
+db_path = 'home/ubuntu/discord-bot/bot_discord/src/database/usuarios'
 load_dotenv()
 token = os.getenv("DISCORD_TOKEN")
 
 chile_tz = datetime.datetime.now().astimezone().tzinfo
-hora_entrar = datetime.time(hour=22, minute=59, tzinfo=chile_tz)
-hora_salida = datetime.time(hour=20, minute=28, tzinfo=chile_tz)
+hora_entrar = datetime.time(hour=8, minute=30, tzinfo=chile_tz)
 
 bot = commands.Bot(command_prefix='>', description="Bot creado para MK", intents=discord.Intents.all(), help_command=None)
 
@@ -24,30 +23,32 @@ bot = commands.Bot(command_prefix='>', description="Bot creado para MK", intents
 @bot.command()
 async def info(ctx):
     dm_privado = await ctx.author.create_dm()
-    embed = discord.Embed(title="Información acerca del bot", description="Aquí va a ir todo con lo relacionado al bot.", 
-                          timestamp=datetime.datetime.now(), 
-                          color=discord.Color.blue())
+    embed = discord.Embed(
+        title="Información acerca del bot", description="Aquí va a ir todo con lo relacionado al bot.", 
+        timestamp=datetime.datetime.now(), 
+        color=discord.Color.blue()
+    )
     embed.set_thumbnail(url="https://www.masterkey.cl/images/logo-mk-new.png")
 
     await dm_privado.send(embed=embed)
 
 @bot.command()
 async def registrar(ctx, *options):
-
     dm_privado = await ctx.author.create_dm()
-
-    channel = discord.utils.get(ctx.guild.text_channels, name='mk-bot')
     
     if not options:
-        embed = discord.Embed(title="Registro", description="Proceso para el registro de asistencia.",
-                          color=discord.Color.blue())
+        embed = discord.Embed(
+            title="Registro", description="Proceso para el registro de asistencia.",
+            color=discord.Color.blue()
+        )
         embed.add_field(name="Por favor.", value="utiliza '>registrar' seguido de tu rut (con guion).")
         embed.add_field(name="Ejemplo:", value=">registrar 11111111-1")
         embed.set_thumbnail(url="https://www.masterkey.cl/images/logo-mk-new.png")
+
         await dm_privado.send(embed=embed)
         return
     
-    if '-' not in options[0]: 
+    elif '-' not in options[0]: 
         
         await dm_privado.send("Por favor ingrese su rut con guion.")
         return
@@ -61,7 +62,7 @@ async def registrar(ctx, *options):
         rut = options[0]
         id_discord = ctx.author.id
 
-        mi_conexion = sqlite3.connect(r"C:\Users\matia\Desktop\bot-discord\src\database\usuarios") #db_path en el sv de aws
+        mi_conexion = sqlite3.connect(db_path) #db_path en el sv de aws
         cursor = mi_conexion.cursor()
 
         cursor.execute("SELECT * FROM usuario WHERE id_discord = ?", (id_discord,)) #Comprobamos si hay una usuario ya con el id de discord
@@ -80,9 +81,11 @@ async def registrar(ctx, *options):
 async def help(ctx):
     dm_privado = await ctx.author.create_dm()
     
-    embed = discord.Embed(title="Comandos del bot", description="Por ahora solo contamos con el comando de '>registro'.", 
-                          timestamp=datetime.datetime.now(), 
-                          color=discord.Color.blue())
+    embed = discord.Embed(
+        title="Comandos del bot", description="Por ahora solo contamos con el comando de '>registro'.", 
+        timestamp=datetime.datetime.now(), 
+        color=discord.Color.blue()
+    )
     embed.set_thumbnail(url="https://www.masterkey.cl/images/logo-mk-new.png")
     await dm_privado.send(embed=embed)
 
@@ -121,7 +124,7 @@ async def on_message(ctx):
             return
         else:
             asd = await ctx.author.create_dm()
-            await asd.send("Por favor usemos el canal <#1312512957032435722>")
+            await asd.send("Por favor usemos el canal: <#1312559101380657152>.") #Cambiar canal mk-bot dependiendo del sv
             return
         
 
@@ -160,13 +163,15 @@ async def mensaje_entrada():
     
     if hora == hora_entrar.strftime("%H:%M") and not es_feriado(): #Agregar paraa sabado y domingo: and not datetime.datetime.today().weekday() == 5 and not datetime.datetime.today().weekday() == 6:
 
-        guild = discord.utils.get(bot.guilds, id=827940399422111754)  #Cambiar por id del sv que queremos enviar msj
+        guild = discord.utils.get(bot.guilds, id=1308175474140123177)  #Cambiar por id del sv que queremos enviar msj
 
         channel = discord.utils.get(guild.text_channels, name='mk-bot')
-        embed = discord.Embed(title="Marcar entrada", 
-                            description="¡Buenos días! No olviden marcar su entrada antes de comenzar la jornada.", 
-                            timestamp=datetime.datetime.now(), 
-                            color=discord.Color.blue())
+        embed = discord.Embed(
+            title="Marcar entrada", 
+            description="¡Buenos días! No olviden marcar su entrada antes de comenzar la jornada.", 
+            timestamp=datetime.datetime.now(), 
+            color=discord.Color.blue()
+        )
         
         embed.set_thumbnail(url="https://www.masterkey.cl/images/logo-mk-new.png")
         msg = await channel.send(content="@everyone", embed=embed, delete_after=77390)
@@ -174,20 +179,24 @@ async def mensaje_entrada():
         
 
 #Mensaje de salida
-@tasks.loop(time=hora_salida)
+@tasks.loop(minutes=1)
 async def mensaje_salida():
     print("entré mensaje salida")
+    chile_tz = datetime.datetime.now().astimezone().tzinfo
     hora = datetime.datetime.now(chile_tz).strftime("%H:%M")
-    
-    if hora == hora_salida.strftime("%H:%M") and not es_feriado():
+    hora_salida = calcular_hora_salida().strftime("%H:%M")
 
-        guild = discord.utils.get(bot.guilds, id=827940399422111754)
-        
+    
+    if hora == hora_salida and not es_feriado():
+        guild = discord.utils.get(bot.guilds, id=1308175474140123177) #Cambiar por id del sv que queremos enviar msj
         channel = discord.utils.get(guild.text_channels, name='mk-bot')
-        embed = discord.Embed(title="Marcar Salida", 
-                            description="Recuerden marcar su salida antes de finalizar su jornada. Que tengan un excelente descanso.", 
-                            timestamp=datetime.datetime.now(), 
-                            color=discord.Color.blue())
+
+        embed = discord.Embed(
+            title="Marcar Salida", 
+            description="Recuerden marcar su salida antes de finalizar su jornada. Que tengan un excelente descanso.", 
+            timestamp=datetime.datetime.now(), 
+            color=discord.Color.blue()
+        )
         embed.set_thumbnail(url="https://www.masterkey.cl/images/logo-mk-new.png")
 
         msg = await channel.send(content="@everyone", embed=embed, delete_after=43200)
@@ -214,7 +223,7 @@ def es_feriado():
 
 def marcar_entrada(id_discord):
 
-    mi_conexion = sqlite3.connect(r"C:\Users\matia\Desktop\bot-discord\src\database\usuarios") #db_path en servidor aws
+    mi_conexion = sqlite3.connect(db_path) #db_path en servidor aws
     cursor = mi_conexion.cursor() 
 
     cursor.execute("SELECT rut FROM usuario WHERE id_discord = ?", (id_discord,))
@@ -235,7 +244,7 @@ def marcar_entrada(id_discord):
     
     
 def marcar_salida(id_discord):
-    mi_conexion = sqlite3.connect(r"C:\Users\matia\Desktop\bot-discord\src\database\usuarios") #db_path en servidor aws
+    mi_conexion = sqlite3.connect(db_path) #db_path en servidor aws
     cursor = mi_conexion.cursor()
 
     cursor.execute("SELECT rut FROM usuario WHERE id_discord = ?", (id_discord,))
@@ -254,6 +263,15 @@ def marcar_salida(id_discord):
         return (f"Ha marcado salida con exito!.")
     else:
         return (f"Ya marcó salida, usted no ha marcado entrada.")
+    
+def calcular_hora_salida():
+    chile_tz = datetime.datetime.now().astimezone().tzinfo
+    hoy = datetime.datetime.now(chile_tz).weekday()  # 0 = lunes, 4 = viernes
+    
+    if hoy == 4:  # si es viernes
+        return datetime.time(hour=17, minute=0, tzinfo=chile_tz)
+    else:
+        return datetime.time(hour=18, minute=0, tzinfo=chile_tz)
 
 
 bot.run(token)
